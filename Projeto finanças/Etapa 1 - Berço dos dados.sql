@@ -82,11 +82,43 @@ CREATE TABLE financas.meta_mensal (
     CONSTRAINT uk_meta UNIQUE (salario_mes_id, categoria_id)
 );
 
+CREATE TYPE financas.tipo_receita AS ENUM (
+    'divida_recebida',   -- alguém te pagou de volta
+    'venda',             -- venda de um bem / produto
+    'freelance',         -- serviço avulso
+    'bonus',             -- bônus / gratificação
+    'outro'              -- qualquer outra entrada extra
+);
+
+CREATE TABLE financas.receita_extra (
+    id               SERIAL          PRIMARY KEY,
+    salario_mes_id   INT             NOT NULL
+                         REFERENCES financas.salario_mes(id)
+                         ON DELETE RESTRICT,
+    descricao        VARCHAR(200)    NOT NULL,
+    valor            DECIMAL(10,2)   NOT NULL CHECK (valor > 0),
+    tipo             financas.tipo_receita NOT NULL DEFAULT 'outro',
+    data_recebimento DATE,
+    parcelado        BOOLEAN         NOT NULL DEFAULT FALSE,
+    num_parcelas     SMALLINT        CHECK (num_parcelas > 1),
+    parcela_atual    SMALLINT        CHECK (parcela_atual >= 1),
+    observacao       TEXT,
+    criado_em        TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_parcelas_receita
+        CHECK (
+            (parcelado = FALSE AND num_parcelas IS NULL AND parcela_atual IS NULL)
+            OR
+            (parcelado = TRUE  AND num_parcelas IS NOT NULL AND parcela_atual IS NOT NULL)
+        )
+);
+
 -- índices para performance
 CREATE INDEX idx_gasto_salario_mes  ON financas.gasto(salario_mes_id);
 CREATE INDEX idx_gasto_categoria    ON financas.gasto(categoria_id);
 CREATE INDEX idx_gasto_data         ON financas.gasto(data_gasto);
 CREATE INDEX idx_meta_salario_mes   ON financas.meta_mensal(salario_mes_id);
+CREATE INDEX idx_receita_extra_salario_mes ON financas.receita_extra(salario_mes_id);
 
 -- CATEGORIAS DISPONIVEIS EM categoria
 INSERT INTO financas.categoria (nome, icone, cor_hex) VALUES
@@ -109,6 +141,8 @@ SELECT * FROM financas.gasto;
 select * from financas.categoria;
 
 select * from financas.meta_mensal;
+
+select * from financas.receita_extra;
 
 DELETE from financas.salario_mes
 WHERE id = 1 ;
