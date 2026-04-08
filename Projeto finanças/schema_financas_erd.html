@@ -1,0 +1,111 @@
+
+<style>
+  #erd svg { max-width: 100%; }
+  .schema-note { font-size: 13px; color: var(--color-text-secondary); margin: 12px 0 0; padding: 10px 14px; border-left: 2px solid var(--color-border-secondary); border-radius: 0; }
+</style>
+<div id="erd"></div>
+<div class="schema-note">💡 Clique nas tabelas para ver descrições detalhadas no chat.</div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: true,
+
+    // 🎯 FUNDO
+    background: '#0f1115',
+
+    // 🎯 TABELAS (NODES)
+    primaryColor: '#1f2430',
+    primaryBorderColor: '#3a3f4b',
+    primaryTextColor: '#e6e6e6',
+
+    // 🎯 LINHAS
+    lineColor: '#5c6370',
+
+    // 🎯 TEXTO GERAL
+    textColor: '#000000',
+
+    // 🎯 CAMPOS INTERNOS (linhas da tabela)
+    secondaryColor: '#252a36',
+    tertiaryColor: '#2c313c',
+
+    // 🎯 BORDAS
+    border1: '#3a3f4b',
+    border2: '#2c313c'
+  },
+});
+
+const diagram = `erDiagram
+  salario_mes {
+    serial id PK
+    int mes
+    int ano
+    decimal valor_bruto
+    decimal valor_liquido
+    date data_recebimento
+    text observacao
+  }
+  categoria {
+    serial id PK
+    varchar nome
+    varchar icone
+    varchar cor_hex
+  }
+  gasto {
+    serial id PK
+    int salario_mes_id FK
+    int categoria_id FK
+    date data_gasto
+    varchar descricao
+    decimal valor
+    varchar forma_pagamento
+    boolean parcelado
+    int num_parcelas
+    int parcela_atual
+    text observacao
+  }
+  meta_mensal {
+    serial id PK
+    int salario_mes_id FK
+    int categoria_id FK
+    decimal valor_limite
+  }
+
+  salario_mes ||--o{ gasto : "tem"
+  salario_mes ||--o{ meta_mensal : "define"
+  categoria ||--o{ gasto : "classifica"
+  categoria ||--o{ meta_mensal : "limita"
+`;
+
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+
+document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
