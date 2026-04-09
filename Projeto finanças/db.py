@@ -5,7 +5,7 @@ def get_connection():
         host="localhost",
         database="Finanças",
         user="postgres",
-        password="20070918"
+        password="*******"
     )
 
 
